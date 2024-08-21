@@ -9,21 +9,12 @@ Console.WriteLine("OpenSSL Sample");
 string filePath = "csv_to_cript.csv";
 int numRows = 10; // Number of rows in the CSV file
 
-if (File.Exists(filePath))
-{
-    Console.WriteLine("File already exists. Deleting the existing file.");
-    File.Delete(filePath);
-}
-if (File.Exists("encrypted_csv_to_cript.csv"))
-{
-    Console.WriteLine("File already exists. Deleting the existing file.");
-    File.Delete("encrypted_csv_to_cript.csv");
-}
-if (File.Exists("decrypted_csv_to_cript.csv"))
-{
-    Console.WriteLine("File already exists. Deleting the existing file.");
-    File.Delete("decrypted_csv_to_cript.csv");
-}
+// deleta all .csv and .bin files
+foreach (var file in Directory.GetFiles(Directory.GetCurrentDirectory(), "*.csv"))
+    File.Delete(file);
+foreach (var file in Directory.GetFiles(Directory.GetCurrentDirectory(), "*.bin"))
+    File.Delete(file);
+
 
 // Generate random data and write to the CSV file
 using (StreamWriter writer = new StreamWriter(filePath))
@@ -83,4 +74,43 @@ using (RSA rsa = RSA.Create(2048))
     // Save the decrypted data to a new file
     File.WriteAllBytes("decrypted_csv_to_cript.csv", decryptedData);
     Console.WriteLine("File decrypted and saved to decrypted_csv_to_cript.csv");
+}
+
+using (Aes aes = Aes.Create())
+{
+    aes.GenerateKey();
+    aes.GenerateIV();
+
+    // Load key and iv from file if exists
+    if (File.Exists("aes_key.bin"))
+        aes.Key = File.ReadAllBytes("aes_key.bin");
+    if (File.Exists("aes_iv.bin"))
+        aes.IV = File.ReadAllBytes("aes_iv.bin");
+
+    byte[] key = aes.Key;
+    byte[] iv = aes.IV;
+
+    // save the key and iv to a file if not exists
+    if (!File.Exists("aes_key.bin"))
+        File.WriteAllBytes("aes_key.bin", key);
+    if (!File.Exists("aes_iv.bin"))
+        File.WriteAllBytes("aes_iv.bin", iv);
+
+
+    var aesService = new AesService(key, iv);
+
+    // Read the file to encrypt
+    byte[] fileData = File.ReadAllBytes("csv_to_cript.csv");
+
+    var encryptedData = aesService.Encrypt(fileData);
+
+    // Save the encrypted data to a new file
+    File.WriteAllBytes("encrypted_csv_to_cript_aes.csv", encryptedData);
+    Console.WriteLine("File encrypted with AES and saved to encrypted_csv_to_cript_aes.csv");
+
+    var decryptedData = aesService.Decrypt(encryptedData);
+
+    // Save the decrypted data to a new file
+    File.WriteAllBytes("decrypted_csv_to_cript_aes.csv", decryptedData);
+    Console.WriteLine("File decrypted with AES and saved to decrypted_csv_to_cript_aes.csv");
 }
